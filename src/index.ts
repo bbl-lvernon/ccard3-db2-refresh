@@ -23,7 +23,12 @@ const ifxDB = new bbankDB2IFX();
 const db2 = new bbankDB2();
 
 
+
 class ccard3Refresher{
+  private SQL : string;
+
+  constructor() {}
+
   // main method - starting point
   async main() {
     try{
@@ -53,7 +58,7 @@ class ccard3Refresher{
     //get all cards <= 1 month old (INFORMIX)
     //const sql = `select * from ccard3 where tmstamp > ${+timeStamp}`;
     const sql = `sql select * from ccard3 where recordstamp >= 2024050802043930`;
-    let cards = await ifxDB.executeQuery(sql);
+    let cards = await ifxDB.execute(sql);
     logger.info('cards from infomix =' + JSON.stringify(cards));
     await ifxDB.closeConnection();
     return cards;
@@ -72,7 +77,6 @@ class ccard3Refresher{
     await this.addMissing(ifxCards);
     //await this.updateRecords();
 }
-
     //try{
 
     // backup of Informix records found... 
@@ -123,7 +127,7 @@ class ccard3Refresher{
             if (Object.keys(db2Res).length < 1){
 
               let insertCardSql = this.insertMissing(card);
-              db2.executeQuery(insertCardSql);
+              db2.executeQuery(JSON.stringify(insertCardSql));
 
               //insertArray.push(sqlRec);
               count++;

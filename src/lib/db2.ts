@@ -6,6 +6,9 @@ import * as ibmdb from 'ibm_db';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 // const dotenvExpand = require('dotenv-expand');
+import * as winston from 'winston';
+const logger = winston.loggers.get('appLogger');
+
 const myEnv = dotenv.config();
 dotenvExpand.expand(myEnv);
 
@@ -13,14 +16,15 @@ let connectionString: string;
 let db: ibmdb.Database;
 
 let bblmainConfig ={
-  "name": `${process.env.DB2NAME}`,
-  "connector": `${process.env.DB2CONNECTOR}`,
-  "host": `${process.env.DB2HOST}`,
-  "port": process.env.DB2PORT,
-  "user": `${process.env.DB2USER}`,
-  "password": `${process.env.DB2PASSWORD}`,
-  "database": `${process.env.DB2DATABASE}`,
-  "schema": `${process.env.DB2SCHEMA}`
+  "name": `${process.env.db2name}`,
+  "connector": `${process.env.db2connector}`,
+  "dsn": `${process.env.db2dsn}`,
+  "host": `${process.env.db2host}`,
+  "port": process.env.db2port,
+  "user": `${process.env.db2user}`,
+  "password": `${process.env.db2password}`,
+  "database": `${process.env.db2database}`,
+  "schema": `${process.env.db2schema}`
 }
 
 export class bbankDB2 {
@@ -33,20 +37,20 @@ export class bbankDB2 {
       // opens a synchronous connection 
       let dbConnected: any;
       try{
-        // console.log('Connection String: ' + connectionString);
+        console.log('Connection String: ' + connectionString);
         db = ibmdb.openSync(connectionString);
         dbConnected = db.connected;
-        console.log('Connection Opened... ');
+        logger.info('Connection Opened... ');
       } catch(err){
         dbConnected = false;
-        console.log('There was an error opening the database connection: ' + err);
+        logger.error('There was an error opening the db2 database connection: ' + err);
       }
       
       return dbConnected;
     }
 
     // execute regular query
-    async executeQuery(sql) {
+    async executeQuery(sql: string) {
       let data: any;
       data = await db.query(sql);
 
@@ -69,4 +73,10 @@ export class bbankDB2 {
       console.log('DB2 Connection Closed...');
     } 
 
+    async execute(sql){try{
+      await this.openConnection();
+      await this.executeQuery(sql);}catch(err){
+        logger.error('Error' + err)
+      }
+    }
 }
