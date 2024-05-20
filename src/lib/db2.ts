@@ -46,7 +46,7 @@ export class bbankDB2 {
     }
 
     // execute regular query
-    async executeQuery(sql: string) {
+    async executeQuery(sql) {
       let data: any;
       data = await db.query(sql);
 

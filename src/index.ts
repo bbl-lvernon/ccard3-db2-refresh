@@ -55,7 +55,7 @@ class ccard3Refresher{
     const sql = `sql select * from ccard3 where recordstamp >= 2024050802043930`;
     let cards = await ifxDB.executeQuery(sql);
     logger.info('cards from infomix =' + JSON.stringify(cards));
-    await this.closeDBConnectionIFX();
+    await ifxDB.closeConnection();
     return cards;
   }
 
@@ -64,13 +64,13 @@ class ccard3Refresher{
     const sql = `select * from blb.BBL_CCARD3;`;
     let db2Cards = await db2.executeQuery(sql);
     logger.info('cards from infomix =' + JSON.stringify(db2Cards));
-    await this.closeDBConnection();
+    await db2.closeConnection();
     return db2Cards;
   }
 
   async refreshDb2(ifxCards, db2Cards){
     await this.addMissing(ifxCards);
-    await this.updateRecords();
+    //await this.updateRecords();
 }
 
     //try{
@@ -102,97 +102,115 @@ class ccard3Refresher{
         logger.info('ADDING MISSING CARDS...');
 
         // compare DB2 records to informix, if the record is not found in DB2 then it must be added... 
+        let count = 0;          
+        let updateArray = [];
+
         for (const card of ifxCards){
           logger.info('card:' + JSON.stringify(card));
           logger.info('ifxCards:' + JSON.stringify(ifxCards));
+          logger.log('info',`Informix Count: ${Object.keys(ifxCards).length }`);
           
           const sqlDB2Compare = `SELECT * FROM BLB.BBL_CCARD3 where CCARDNO = ${card.ccardno};`;
           let db2Res = await db2.executeQuery(sqlDB2Compare);
+
           try{
             db2Res;
           }catch(err){
             logger.log('info',`Error getting DB2 records... ` + err);
           };
-          
-          if(db2Res){
-            if (Object.keys(db2Res).length < 1){
-              // ifx record does not exists in DB2 so add to array to do the Insert... 
 
-              let sqlRec = this.insertMissing(card);
-              recToInsert.push(sqlRec);
+          if(db2Res){              // ifx record does not exists in DB2 so add to array to do the Insert... 
+            if (Object.keys(db2Res).length < 1){
+
+              let insertCardSql = this.insertMissing(card);
+              db2.executeQuery(insertCardSql);
+
+              //insertArray.push(sqlRec);
               count++;
-            } else { 
-              await this.updateRecord();
+              return
+              //for (const newRow of insertArray){;}
+            } else { // ifx record does exist in DB2 so now to compare/update...
+              //check important fields
+              logger.info(`card.ccardgroupcode == db2Res.ccardgroupcode || card.ccardprofile == db2Res.ccardprofile || card.ccardstatus == db2Res.ccardstatus ` + card.ccardgroupcode + db2Res.ccardgroupcode + card.ccardprofile + db2Res.ccardprofile + card.ccardstatus + db2Res.ccardstatus);
+              if(card.ccardgroupcode == db2Res.ccardgroupcode || card.ccardprofile == db2Res.ccardprofile || card.ccardstatus == db2Res.ccardstatus){
+                //replace entire row
+                let updateSql = await this.insertMissing(card);
+                await db2.executeQuery(updateSql);
+
+              }
+              count++;
               return;
             }
-            logger.log('info',`Informix Count: ${Object.keys(ifxRes).length }`);
-            //}
-        
-            ifxAll = Object.keys(ifxRes).length;
-            logger.log('info',`Total Informix Records compared: ${ifxAll}, Total Records to update: ${count}, Total Errors: ${ifxErrors}`);
-         
-            // update FBE with missing records... 
-            logger.log('info',`Update FBE CTA2`);
-            for (const insDB2 of recToInsert){
-              // console.log(insDB2);
-              
-              let sqlLog = insDB2 + '\n';
-              fs.appendFileSync(cta2InsertSQLs, sqlLog);
-        
-              let results: any;
-        
-              await db2.executeNonQuery(insDB2).then(res => {
-                results = res;
-              }).catch( async err => {
-                logger.log('info',`Error Inserting the following Record into DB2: ${insDB2.split('VALUES')[1]}`);
-                logger.log('info',`${err}`);
-              });
-        
-              if (results){
-                if(results >= 1){
-                  logger.log('info',`Record inserted succesfully: ${insDB2.split('VALUES')[1]}`);
-                }
-              } else {
-                logger.log('info',`Failed to create log record no rows inserted: ${results}`);
-              }
-        
-            }
-        
-            logger.log('info',`Finished inserting new records into DB2...`);
           }
         }
       }
 
-   async updateRecords(){
-              logger.info('CARD EXISTS ON DB2 BUT IS OUTDATED. UPDATING..');
-              // perform and update on all other records... compare the status for both records if there is a difference then do an Update
-              if (ifx.status !== db2Res[0].STATUS || ifx.corolcta !== db2Res[0].COROLCTA){
+      //       }
+        
+      //       logger.log('info',`Total Informix Records compared: ${Object.keys(ifxCards).length}, Total Records to update: ${count}`);
+         
+      //       // update FBE with missing records... 
+      //       logger.log('info',`Update FBE CTA2`);
+      //       for (const insDB2 of recToInsert){
+      //         // console.log(insDB2);
+              
+      //         let sqlLog = insDB2 + '\n';
+      //         fs.appendFileSync(cta2InsertSQLs, sqlLog);
+        
+      //         let results: any;
+        
+      //         await db2.executeNonQuery(insDB2).then(res => {
+      //           results = res;
+      //         }).catch( async err => {
+      //           logger.log('info',`Error Inserting the following Record into DB2: ${insDB2.split('VALUES')[1]}`);
+      //           logger.log('info',`${err}`);
+      //         });
+        
+      //         if (results){
+      //           if(results >= 1){
+      //             logger.log('info',`Record inserted succesfully: ${insDB2.split('VALUES')[1]}`);
+      //           }
+      //         } else {
+      //           logger.log('info',`Failed to create log record no rows inserted: ${results}`);
+      //         }
+        
+      //       }
+        
+      //       logger.log('info',`Finished inserting new records into DB2...`);
+      //     }
+      //   }
+      // }
 
-                const updateDB2Stats = `UPDATE BLB.BBL_CTA2 SET COROLCTA = '${ifx.corolcta}', STATUS = ${ifx.status}, DATEREMOVED = ${ifx.dateremoved} WHERE NRCLI = '${ifx.nrcli}' AND CCARDTYPE = '${ifx.ccardtype}' AND CCARDNO = ${ifx.ccardno};`;
+  //  async updateRecords(ifxCards){
+  //             logger.info('CARD EXISTS ON DB2 BUT IS OUTDATED. UPDATING..');
+  //             // perform and update on all other records... compare the status for both records if there is a difference then do an Update
+  //             if (ifxCards.status !== ifxCards[0].STATUS || ifxCards.corolcta !== ifxCards[0].COROLCTA){
 
-                let results: any;
+  //               const updateDB2Stats = `UPDATE BLB.BBL_CTA2 SET COROLCTA = '${ifx.corolcta}', STATUS = ${ifx.status}, DATEREMOVED = ${ifx.dateremoved} WHERE NRCLI = '${ifx.nrcli}' AND CCARDTYPE = '${ifx.ccardtype}' AND CCARDNO = ${ifx.ccardno};`;
 
-                await db2.executeNonQuery(updateDB2Stats).then(res => {
-                  results = res;
-                }).catch( async err => {
-                  logger.log('info',`Error Updating the following Record into DB2 -> Nrcli: ${ifx.nrcli} CCardno: ${ifx.ccardno}`);
-                  logger.log('info',`${err}`);
-                });
+  //               let results: any;
 
-                if (results){
-                  if(results >= 1){
-                    logger.log('info',`Record updated succesfully -> Nrcli: ${ifx.nrcli} CCardno: ${ifx.ccardno}`);
-                  }
-                } else {
-                  logger.log('info',`No rows affected: ${results} Record either does not exist or a status has already been set -> Details, Nrcli: ${ifx.nrcli} CCardno: ${ifx.ccardno}`);
-                }
+  //               await db2.executeNonQuery(updateDB2Stats).then(res => {
+  //                 results = res;
+  //               }).catch( async err => {
+  //                 logger.log('info',`Error Updating the following Record into DB2 -> Nrcli: ${ifx.nrcli} CCardno: ${ifx.ccardno}`);
+  //                 logger.log('info',`${err}`);
+  //               });
 
-                let sqlLog = updateDB2Stats + '\n';
-                fs.appendFileSync(cta2UpdateSQLs, sqlLog);
-              }
+  //               if (results){
+  //                 if(results >= 1){
+  //                   logger.log('info',`Record updated succesfully -> Nrcli: ${ifx.nrcli} CCardno: ${ifx.ccardno}`);
+  //                 }
+  //               } else {
+  //                 logger.log('info',`No rows affected: ${results} Record either does not exist or a status has already been set -> Details, Nrcli: ${ifx.nrcli} CCardno: ${ifx.ccardno}`);
+  //               }
+
+  //               let sqlLog = updateDB2Stats + '\n';
+  //               fs.appendFileSync(cta2UpdateSQLs, sqlLog);
+  //             }
               
 
-            }
+  //           }
 
           
           
@@ -200,62 +218,62 @@ class ccard3Refresher{
      // }
     
 
-  async DB2CompareToIFXStats() {
+  // async DB2CompareToIFXStats() {
 
-    const oneMonth = dayjs().subtract(1, 'month').format('YYYYMMDD');
-    const ifxStatSQL = `Select * from cta2 where dateremoved > ${+oneMonth};`;
+  //   const oneMonth = dayjs().subtract(1, 'month').format('YYYYMMDD');
+  //   const ifxStatSQL = `Select * from cta2 where dateremoved > ${+oneMonth};`;
 
-    let ifxRmv: any;  // informix dataset
-    logger.log('info',`Getting Data from Informix.............`);
+  //   let ifxRmv: any;  // informix dataset
+  //   logger.log('info',`Getting Data from Informix.............`);
 
-    logger.log('info',`${ifxStatSQL}`);
-    await ifxDB.executeQuery(ifxStatSQL).then(res => {
-      ifxRmv = res;
-      logger.log('info',`Query Executed Succesfully.`);
-    }).catch(err => {
-      logger.log('info',`There was an error executing the statement.`);
-      logger.log('info',`${err}`);
-    });
+  //   logger.log('info',`${ifxStatSQL}`);
+  //   await ifxDB.executeQuery(ifxStatSQL).then(res => {
+  //     ifxRmv = res;
+  //     logger.log('info',`Query Executed Succesfully.`);
+  //   }).catch(err => {
+  //     logger.log('info',`There was an error executing the statement.`);
+  //     logger.log('info',`${err}`);
+  //   });
 
-    if (ifxRmv){
-      if(Object.keys(ifxRmv).length > 0) {
-        logger.log('info',`Number of records found: ${Object.keys(ifxRmv).length}`);
+  //   if (ifxRmv){
+  //     if(Object.keys(ifxRmv).length > 0) {
+  //       logger.log('info',`Number of records found: ${Object.keys(ifxRmv).length}`);
 
-        // compare ifx stat 9 records to matching DB2 records and update DB2 status accordingly
-        for (const rec of ifxRmv){
-          const updateDB2Stats = `UPDATE BLB.BBL_CTA2 SET STATUS = ${rec.status}, DATEREMOVED = ${rec.dateremoved} WHERE NRCLI = '${rec.nrcli}' AND CCARDTYPE = '${rec.ccardtype}' AND CCARDNO = ${rec.ccardno};`;
+  //       // compare ifx stat 9 records to matching DB2 records and update DB2 status accordingly
+  //       for (const rec of ifxRmv){
+  //         const updateDB2Stats = `UPDATE BLB.BBL_CTA2 SET STATUS = ${rec.status}, DATEREMOVED = ${rec.dateremoved} WHERE NRCLI = '${rec.nrcli}' AND CCARDTYPE = '${rec.ccardtype}' AND CCARDNO = ${rec.ccardno};`;
 
-          let results: any;
+  //         let results: any;
 
-          await db2.executeNonQuery(updateDB2Stats).then(res => {
-            results = res;
-          }).catch( async err => {
-            logger.log('info',`Error Updating the following Record into DB2 -> Nrcli: ${rec.nrcli} CCardno: ${rec.ccardno}`);
-            logger.log('info',`${err}`);
-          });
+  //         await db2.executeNonQuery(updateDB2Stats).then(res => {
+  //           results = res;
+  //         }).catch( async err => {
+  //           logger.log('info',`Error Updating the following Record into DB2 -> Nrcli: ${rec.nrcli} CCardno: ${rec.ccardno}`);
+  //           logger.log('info',`${err}`);
+  //         });
 
-          if (results){
-            if(results >= 1){
-              logger.log('info',`Record updated succesfully -> Nrcli: ${rec.nrcli} CCardno: ${rec.ccardno}`);
-            }
-          } else {
-            logger.log('info',`No rows affected: ${results} Record either does not exist or a status has already been set -> Details, Nrcli: ${rec.nrcli} CCardno: ${rec.ccardno}`);
-          }
+  //         if (results){
+  //           if(results >= 1){
+  //             logger.log('info',`Record updated succesfully -> Nrcli: ${rec.nrcli} CCardno: ${rec.ccardno}`);
+  //           }
+  //         } else {
+  //           logger.log('info',`No rows affected: ${results} Record either does not exist or a status has already been set -> Details, Nrcli: ${rec.nrcli} CCardno: ${rec.ccardno}`);
+  //         }
 
-          let sqlLog = updateDB2Stats + '\n';
-          fs.appendFileSync(cta2UpdateSQLs, sqlLog);
+  //         let sqlLog = updateDB2Stats + '\n';
+  //         fs.appendFileSync(cta2UpdateSQLs, sqlLog);
 
-       } // END 
+  //      } // END 
 
-      } else {
-        logger.log('info', `No records returned...`);
-      }
+  //     } else {
+  //       logger.log('info', `No records returned...`);
+  //     }
 
-    } // END
+  //   } // END
 
-    logger.log('info',`Finished updating records in DB2...`);
+  //   logger.log('info',`Finished updating records in DB2...`);
 
-  }
+  // }
 
   async insertMissing(ifxRecord: any){
 
