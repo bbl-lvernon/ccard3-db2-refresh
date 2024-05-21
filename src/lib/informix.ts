@@ -15,17 +15,6 @@ let connectionString: string;
 let db: ibmdb.Database;
  
 
-let bblmainConfig1 ={
-  "name": `${process.env.NAME}`,
-  "connector": `${process.env.CONNECTOR}`,
-  "dsn": `${process.env.DSN}`,
-  "host": `${process.env.HOST}`,
-  "port": process.env.PORT,
-  "user": `${process.env.USER}`,
-  "password": `${process.env.PASSWORD}`,
-  "database": `${process.env.DATABASE}`,
-  "schema": `${process.env.SCHEMA}`
-}
 let bblmainConfig ={
   "name": `${process.env.NAME}`,
   "connector": `${process.env.CONNECTOR}`,
@@ -45,19 +34,18 @@ export class bbankDB2IFX {
 
 
     constructor() {
-      process.env.NAME='IFX';
-      process.env.CONNECTOR='jdbc'
-      let process.env.DSN='informix-sqli'
-      let process.env.HOST='192.25.200.182'
-      let process.env.PORT=1526
-      let process.env.USER='informix'
-      let process.env.PASSWORD='informix'
-      let process.env.DATABASE='main_dev2'
-      let process.env.SCHEMA=''
+      
+      // let process.env.HOST='192.25.200.182'
+      // let process.env.PORT=1526
+      // let process.env.USER='informix'
+      // let process.env.PASSWORD='informix'
+      // let process.env.SCHEMA=''
       // Initializaing connection to informix
       connectionString = `DATABASE=${bblmainConfig.database};HOSTNAME=${bblmainConfig.host};PORT=${bblmainConfig.port};UID=${bblmainConfig.user};PWD=${bblmainConfig.password}`;
     }
     
+    connectionString = `DATABASE=main_dev2;HOSTNAME=192.25.200.182;PORT=1526;USER=informix;PWD=informix`;
+
     async openConnection() {
       // opens a synchronous connection 
       let dbConnected: any;
