@@ -4,16 +4,13 @@
 import * as ibmdb from 'ibm_db';
 // import * as bblmainConfig from '../config/bblmain-ifx.datasource.json';
 import dotenv from 'dotenv';
-
- require('dotenv').config();
-
-import * as winston from 'winston';
-import { rejects } from 'node:assert';
-const logger = winston.loggers.get('appLogger');
+import dotenvExpand from 'dotenv-expand';
+// const dotenvExpand = require('dotenv-expand');
+const myEnv = dotenv.config();
+dotenvExpand.expand(myEnv);
 
 let connectionString: string;
 let db: ibmdb.Database;
- 
 
 let bblmainConfig ={
   "name": `${process.env.NAME}`,
@@ -27,37 +24,23 @@ let bblmainConfig ={
   "schema": `${process.env.SCHEMA}`
 }
 
-
-
-
 export class bbankDB2IFX {
-
-
     constructor() {
-      
-      // let process.env.HOST='192.25.200.182'
-      // let process.env.PORT=1526
-      // let process.env.USER='informix'
-      // let process.env.PASSWORD='informix'
-      // let process.env.SCHEMA=''
       // Initializaing connection to informix
       connectionString = `DATABASE=${bblmainConfig.database};HOSTNAME=${bblmainConfig.host};PORT=${bblmainConfig.port};UID=${bblmainConfig.user};PWD=${bblmainConfig.password}`;
     }
     
-    connectionString = `DATABASE=main_dev2;HOSTNAME=192.25.200.182;PORT=1526;USER=informix;PWD=informix`;
-
     async openConnection() {
       // opens a synchronous connection 
       let dbConnected: any;
       try{
-        console.log('Connection String: ' + connectionString);
+         console.log('Connection String: ' + connectionString);
         db = ibmdb.openSync(connectionString);
         dbConnected = db.connected;
-        logger.info('Connection Opened... ');
+        console.log('Connection Opened... ');
       } catch(err){
         dbConnected = false;
-        logger.error('There was an error opening the infx database connection: ' + err);
-        throw err;
+        console.log('There was an error opening the database connection: ' + err);
       }
       
       return dbConnected;
@@ -65,20 +48,24 @@ export class bbankDB2IFX {
 
     // execute regular query
     async executeQuery(sql: string) {
+        try{
       let data: any;
       data = await db.query(sql);
 
       return data;
+    }catch(err){'Error: ' + err;throw err;}
     }
+    
 
     // Can be used for UPDATE, INSERT and DELETE. Returns the number of rows affected
     async executeNonQuery(sql: string): Promise<any> {
+        try{
       let data: any;
       let statement = db.prepareSync(sql);
       // data = statement.executeNonQuerySync();
       data = await statement.executeNonQuery();
 
-      return data;
+      return data;}catch(err){'Error: ' + err;throw err;}
     }
   
     // close this connection when finished...
@@ -87,10 +74,4 @@ export class bbankDB2IFX {
       console.log('Informix Connection Closed...');
     } 
 
-    async execute(sql){try{
-      await this.openConnection();
-      await this.executeQuery(sql);}catch(err){
-        logger.error('Error' + err)
-      }
-    }
-  }
+}

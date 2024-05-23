@@ -51,10 +51,13 @@ export class bbankDB2 {
 
     // execute regular query
     async executeQuery(sql: string) {
+      try{
       let data: any;
       data = await db.query(sql);
 
-      return data;
+      return data;}catch(err){
+        logger.error('Error' + err)
+      }
     }
 
     // Can be used for UPDATE, INSERT and DELETE. Returns the number of rows affected
@@ -69,7 +72,7 @@ export class bbankDB2 {
   
     // close this connection when finished...
     async closeConnection() {
-      ibmdb.close(db);
+      //ibmdb.close(db);
       console.log('DB2 Connection Closed...');
     } 
 

@@ -9,11 +9,13 @@ import { ApplicationLogger } from './lib/logger';
 import { bbankDB2IFX } from "./lib/informix";
 import { bbankDB2 } from "./lib/db2";
 import { exit } from 'process';
+import { info } from 'node:console';
 
 const logName = 'cta2Upated-%DATE%.log';
 const applicationLogger = new ApplicationLogger();
 applicationLogger.instantiateLogger(logName); 
-const logger = winston.loggers.get('appLogger');
+const logger = new ApplicationLogger().instantiateLogger('application.log');
+
 
 const dailyFilePath = `./input/CTA2-${dayjs().format('YYYY-MM-DD')}.txt`;
 const cta2InsertSQLs = `./output/CTA2DBInsertSQLs-${dayjs().format('YYYY-MM-DD')}.txt`;
@@ -33,6 +35,17 @@ class ccard3Refresher{
   async main() {
     try{
     logger.info('CCARD3 DB2 REFRESHER APPLICATION - STARTED - ' + dayjs().format('YYYY-MM-DD'));
+    let db2Conn = await db2.openConnection();;
+    let IFXConn = await ifxDB.openConnection();
+    if(!db2Conn){
+      logger.log('info','No DB2 Database Connection Established, Exiting...');
+      exit(0);
+    }
+
+    if(!IFXConn){
+      logger.log('info','No IFX Database Connection Established, Exiting...');
+      exit(0);
+    }
     logger.info(`Obtaining past month's cards from Informix...`);
     let cards = await this.getCards();
     logger.info(`Success - Got past month's cards from Informix... `);
@@ -53,25 +66,35 @@ class ccard3Refresher{
   // will then update DB2 with a copy of the missing/new informix records
   // once first step is complete will compare informix to DB2 to find records that have been removed... 
   async getCards() {
+    try{
     let oneMth = dayjs().subtract(1, 'month').format('YYYYMMDDHHmmss');
     const timeStamp = oneMth + '00';
     //get all cards <= 1 month old (INFORMIX)
     //const sql = `select * from ccard3 where tmstamp > ${+timeStamp}`;
-    const sql = `sql select * from ccard3 where recordstamp >= 2024050802043930`;
-    let cards = await ifxDB.execute(sql);
+    const sql = `SELECT * FROM CCARD3 WHERE RECORDSTAMP >= 2024050802043930 AND ccardno = '5339555901069017'`;
+    
+    let cards: any[] = await ifxDB.executeQuery(sql);
+  
     logger.info('cards from infomix =' + JSON.stringify(cards));
-    await ifxDB.closeConnection();
+    logger.info('number of cards from infomix =' + JSON.stringify(cards.length)); 
     return cards;
+    }catch(err){
+      logger.info('Unable to get cards from infomix: ' + err);
+    //await ifxDB.closeConnection();
+    throw err;}
+  
   }
 
   async getDb2Cards() {
     //get all cards (FBE DB2)
+    try{
     const sql = `select * from blb.BBL_CCARD3;`;
-    let db2Cards = await db2.executeQuery(sql);
+    let db2Cards = await db2.execute(sql);
     logger.info('cards from infomix =' + JSON.stringify(db2Cards));
-    await db2.closeConnection();
+    //await db2.closeConnection();
     return db2Cards;
-  }
+  }catch(err){logger.error('Error' + err);throw err;}
+}
 
   async refreshDb2(ifxCards, db2Cards){
     await this.addMissing(ifxCards);
@@ -102,6 +125,9 @@ class ccard3Refresher{
     //       fs.appendFileSync(dailyFilePath, printRec);
        // }
 
+     
+
+
     async addMissing(ifxCards){
         logger.info('ADDING MISSING CARDS...');
 
@@ -115,10 +141,11 @@ class ccard3Refresher{
           logger.log('info',`Informix Count: ${Object.keys(ifxCards).length }`);
           
           const sqlDB2Compare = `SELECT * FROM BLB.BBL_CCARD3 where CCARDNO = ${card.ccardno};`;
+          logger.info('sqlDB2Compare sql:' + sqlDB2Compare);
           let db2Res = await db2.executeQuery(sqlDB2Compare);
 
           try{
-            db2Res;
+            logger.info('db2response:' +db2Res);
           }catch(err){
             logger.log('info',`Error getting DB2 records... ` + err);
           };
@@ -139,8 +166,6 @@ class ccard3Refresher{
               if(card.ccardgroupcode == db2Res.ccardgroupcode || card.ccardprofile == db2Res.ccardprofile || card.ccardstatus == db2Res.ccardstatus){
                 //replace entire row
                 let updateSql = await this.insertMissing(card);
-                await db2.executeQuery(updateSql);
-
               }
               count++;
               return;
@@ -281,6 +306,7 @@ class ccard3Refresher{
 
   async insertMissing(ifxRecord: any){
 
+    try{
     let CCARDNO = ifxRecord.ccardno;
     let CCARDNAMEADDR = ifxRecord.ccardnameaddr;
     let CCARD4DIGITS = ifxRecord.ccard4digits; 
@@ -312,10 +338,11 @@ class ccard3Refresher{
      '${INSURANCE}', '${PLASTICTYPE}', '${CCARDNOPASTDUE2}', '${ONLINELINKFLAG}', '${CCARDYEAR3}', '${CCARDNOPASTDUE3}', '${CCARDNOPASTDUE3QTY}', '${CCARDCREDITLIMIT}', '${CCARDEXPDATE}', '${RECORDSTAMP}', '${CCARDACCNUM}')`;
 
      
-    // console.log(SQL);
-
-    return SQL;
-
+    logger.info('currently executing SQL='+ SQL);
+    await db2.executeNonQuery(SQL)
+    }catch(err){
+      logger.error('Error overwriting new record. Card Number:'+  ifxRecord.ccardno);
+      throw err;}
   }
 
 

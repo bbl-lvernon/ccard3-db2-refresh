@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import winston from 'winston';
+import winston, { Logger } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
 // Define custom format for logs
@@ -17,7 +17,7 @@ export class ApplicationLogger {
     
     instantiateLogger(fileName: string) {
         // Instantiate loggers, rotate daily
-        winston.loggers.add('appLogger', {
+        const logger = winston.loggers.add('appLogger', {
             exitOnError: false,
             format: winston.format.combine(
                 customFormat
@@ -31,9 +31,12 @@ export class ApplicationLogger {
                 }),
                 new winston.transports.Console({
                     level: 'info'
-                })
-            ]
+                }),
+                new winston.transports.File({ filename: 'error.log', level: 'error' }),
+                new winston.transports.File({ filename: 'combined.log' })
+                ]
         });
+        return logger;
     }
 
 }
