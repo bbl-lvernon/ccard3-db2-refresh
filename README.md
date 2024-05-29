@@ -1,7 +1,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <a href="https://github.com/BelizeBankLimited/aa-miles-refresh">
+  <a href="https://github.com/BelizeBankLimited/ccard3-db2-refresh">
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
@@ -51,8 +51,7 @@ What does it do?
 
 ### Files
 
-* Output file => /aa-miles-refresh/output/E-Kyash_Phone_Numbers.txt
-* Log file => /aa-miles-refresh/logs (detailed log of process)
+* Log file => /ccard3-db2-refresh/logs (detailed log of process)
 
 <!-- GETTING STARTED -->
 ### Getting Started
@@ -70,7 +69,7 @@ To get a local copy up and running follow these simple example steps.
 
 1. Clone the repo to a server with NodeJS 10+ installed && access to a DB2 database (FBE dev/regression/production)
    ```sh
-   git clone https://github.com/BelizeBankLimited/aa-miles-refresh.git
+   git clone https://github.com/BelizeBankLimited/ccard3-db2-refresh.git
    ```
 2. Install NPM packages 
    ```sh
