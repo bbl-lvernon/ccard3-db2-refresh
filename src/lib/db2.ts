@@ -5,9 +5,12 @@ import * as ibmdb from 'ibm_db';
 // import * as bblmainConfig from '../config/bblmain-ifx.datasource.json';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
+import { ApplicationLogger } from '../lib/logger';
 // const dotenvExpand = require('dotenv-expand');
-import * as winston from 'winston';
-const logger = winston.loggers.get('appLogger');
+const logName = 'cta2Updated-%DATE%.log';
+const applicationLogger = new ApplicationLogger();
+const logger = applicationLogger.instantiateLogger(logName); // Use the same instance for consistency
+
 
 const myEnv = dotenv.config();
 dotenvExpand.expand(myEnv);
@@ -37,10 +40,10 @@ export class bbankDB2 {
       // opens a synchronous connection 
       let dbConnected: any;
       try{
-        console.log('Connection String: ' + connectionString);
+        //logger.info('Connection String: ' + connectionString);
         db = ibmdb.openSync(connectionString);
         dbConnected = db.connected;
-        logger.info('Connection Opened... ');
+        //logger.info('Connection Opened... ');
       } catch(err){
         dbConnected = false;
         logger.error('There was an error opening the db2 database connection: ' + err);
@@ -52,6 +55,7 @@ export class bbankDB2 {
     // execute regular query
     async executeQuery(sql: string) {
       try{
+        //logger.info('SQL to run'+sql);
       let data: any;
       data = await db.query(sql);
 
@@ -61,19 +65,24 @@ export class bbankDB2 {
     }
 
     // Can be used for UPDATE, INSERT and DELETE. Returns the number of rows affected
-    async executeNonQuery(sql: string): Promise<any> {
+    async executeNonQuery(sql: string): Promise<boolean> {
+      //logger.info('SQL to run'+sql);
+      try{
       let data: any;
       let statement = db.prepareSync(sql);
       // data = statement.executeNonQuerySync();
       data = await statement.executeNonQuery();
 
-      return data;
+      return data;}catch(err){
+        //logger.info('SQL to run'+sql);
+        throw err;
+      }
     }
   
     // close this connection when finished...
     async closeConnection() {
-      //ibmdb.close(db);
-      console.log('DB2 Connection Closed...');
+      ibmdb.close(db);
+      //logger.info('DB2 Connection Closed...');
     } 
 
     async execute(sql){try{

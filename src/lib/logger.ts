@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import winston, { Logger } from 'winston';
+import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
 // Define custom format for logs
@@ -12,31 +12,30 @@ const customFormat = winston.format.combine(
 );
 
 export class ApplicationLogger {
+  constructor() {}
 
-    constructor(){}
-    
-    instantiateLogger(fileName: string) {
-        // Instantiate loggers, rotate daily
-        const logger = winston.loggers.add('appLogger', {
-            exitOnError: false,
-            format: winston.format.combine(
-                customFormat
-            ),
-            transports: [
-                new DailyRotateFile({
-                    filename: './logs/' + fileName,
-                    datePattern: 'YYYY-MM-DD',
-                    zippedArchive: true,
-                    level: 'info'
-                }),
-                new winston.transports.Console({
-                    level: 'info'
-                }),
-                new winston.transports.File({ filename: 'error.log', level: 'error' }),
-                new winston.transports.File({ filename: 'combined.log' })
-                ]
-        });
-        return logger;
-    }
+  instantiateLogger(fileName: string) {
+    // Instantiate loggers, rotate daily
+    const logger = winston.createLogger({
+      exitOnError: false,
+      format: winston.format.combine(
+        customFormat
+      ),
+      transports: [
+        new DailyRotateFile({
+          filename: './logs/' + fileName,
+          datePattern: 'YYYY-MM-DD',
+          zippedArchive: true,
+          level: 'info'
+        }),
+        new winston.transports.Console({
+          level: 'info'
+        }),
+        new winston.transports.File({ filename: 'error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'combined.log' })
+      ]
+    });
 
+    return logger;
+  }
 }

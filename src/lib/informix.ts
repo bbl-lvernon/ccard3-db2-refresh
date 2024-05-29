@@ -6,8 +6,13 @@ import * as ibmdb from 'ibm_db';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 // const dotenvExpand = require('dotenv-expand');
+import { ApplicationLogger } from '../lib/logger';
 const myEnv = dotenv.config();
 dotenvExpand.expand(myEnv);
+
+const logName = 'cta2Updated-%DATE%.log';
+const applicationLogger = new ApplicationLogger();
+const logger = applicationLogger.instantiateLogger(logName); // Use the same instance for consistency
 
 let connectionString: string;
 let db: ibmdb.Database;
@@ -34,13 +39,13 @@ export class bbankDB2IFX {
       // opens a synchronous connection 
       let dbConnected: any;
       try{
-         console.log('Connection String: ' + connectionString);
+        //logger.info('Connection String: ' + connectionString);
         db = ibmdb.openSync(connectionString);
         dbConnected = db.connected;
-        console.log('Connection Opened... ');
+        //logger.info('Connection Opened... ');
       } catch(err){
         dbConnected = false;
-        console.log('There was an error opening the database connection: ' + err);
+        logger.error('There was an error opening the database connection: ' + err);
       }
       
       return dbConnected;
@@ -71,7 +76,7 @@ export class bbankDB2IFX {
     // close this connection when finished...
     async closeConnection() {
       ibmdb.close(db);
-      console.log('Informix Connection Closed...');
+      //logger.info('Informix Connection Closed...');
     } 
 
 }
