@@ -10,7 +10,7 @@ import { ApplicationLogger } from '../lib/logger';
 const myEnv = dotenv.config();
 dotenvExpand.expand(myEnv);
 
-const logName = 'cta2Updated-%DATE%.log';
+const logName = 'ccard3-refresh-log-%DATE%.txt';
 const applicationLogger = new ApplicationLogger();
 const logger = applicationLogger.instantiateLogger(logName); // Use the same instance for consistency
 

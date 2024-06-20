@@ -8,7 +8,7 @@
   <h3 align="center">BBL_CCARD3  REFRESHER</h3>
 
   <p align="center">
-    A Node JS program, to extract and transpose client information to be concatenated by automate along with other client info.
+    A Node JS program, to extract new or updated cards in the informix ccadr3 table and add that information to the db2 ccard3 table.
   </p>
 </p>
 
@@ -44,17 +44,19 @@ What does it do?
 
 * Open DB connections
 * Retrieve last month's cards managed by informix.
-* Compares each card from INFORMIX CCAARD3 to records in FBE BBL_CCARD3.
+* Compares following fields each card from INFORMIX CCAARD3 to records in FBE BBL_CCARD3
+  CCARDGROUPCODE, CCARDPROFILE, 
+  CCARDSTATUS, RECORDSTAMP
 * Updates or insert depending on if the card is already in FBE BBL_CCARD3
 * Writes a basic log.
 
 
 ### Files
 
-* Log file => /ccard3-db2-refresh/logs (detailed log of process)
+* Log file => /ccard3-db2-refresh/logs
 
 <!-- GETTING STARTED -->
-### Getting Started
+### Getting Started / Prerequisites
 
 This is an example of how you may setup your project locally.
 To get a local copy up and running follow these simple example steps.
@@ -79,10 +81,10 @@ To get a local copy up and running follow these simple example steps.
    ```sh
    npm start
    ```
-This can also be run with the batch.bat script located in root directory.
+This app can also be run with the batch.bat script located in root directory.
 
 
    Note:
-   Ensure your machine has proper authority to access Database contents and ability to make changes to your filesystem.
+   Ensure your machine has proper firewall configuration to access Database contents and ability to make changes to your filesystem.
 
 

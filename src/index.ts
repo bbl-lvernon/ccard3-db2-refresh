@@ -8,7 +8,7 @@ import { bbankDB2IFX } from "./lib/informix";
 import { bbankDB2 } from "./lib/db2";
 import { exit } from 'process';
 
-const logName = 'ccard3RefreshLog-%DATE%.log';
+const logName = 'ccard3-refresh-log-%DATE%.txt';
 const applicationLogger = new ApplicationLogger();
 const logger = applicationLogger.instantiateLogger(logName); // Use the same instance for consistency
 
@@ -16,9 +16,7 @@ const ifxDB = new bbankDB2IFX();
 const db2 = new bbankDB2();
 
 class ccard3Refresher{
-  private SQL : string;
-  private db2Res: any[]
-  private recordsUpdated = 0;
+
   constructor() {}
   // main method - starting point
   async main() {
@@ -88,7 +86,7 @@ let processed = (insertCount + updateCount + skipCount);
             //logger.info(`card# ${card.ccardno}not in DB2 yet, inserting...`);
             await this.insert(card);
             insertCount++;
-            logger.info(`Inserted card# ${card.ccardno}`);
+            console.log(`Inserted card# ${card.ccardno}`);
           }else if(db2Res.length == 1){ 
               // ifx record does exist in DB2 so now to compare/update...
               //check important fields
@@ -106,7 +104,7 @@ let processed = (insertCount + updateCount + skipCount);
                 try{
                   await this.update(card);
                   updateCount++;
-                  logger.info(`Updated card# ${card.ccardno}`);
+                  console.log(`Updated card# ${card.ccardno}`);
                 }catch(err) {
                    logger.error(`Error updating card# ${card.ccardno}: ${err}`);
                    throw err;
@@ -119,9 +117,9 @@ let processed = (insertCount + updateCount + skipCount);
 
 
             }
-       }      logger.info(`${updateCount} RECORDS TOTAL UPDATED.`);
-              logger.info(`${insertCount} RECORDS TOTAL INSERTED.`);
-              logger.info(`${skipCount} RECORDS TOTAL SKIPPED.`);
+       }      logger.info(`${updateCount} RECORDS UPDATED.`);
+              logger.info(`${insertCount} RECORDS INSERTED.`);
+              logger.info(`${skipCount} RECORDS SKIPPED.`);
     }
 
   async update(ifxRecord){
